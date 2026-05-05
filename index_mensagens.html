@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XP Relatórios — Assessores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0f1e;
+  --surface: #0f1729;
+  --card: #111d35;
+  --card2: #162240;
+  --border: #1e2d4a;
+  --accent: #3b82f6;
+  --accent2: #6366f1;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Sora', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+#app { display: grid; grid-template-columns: 260px 1fr; grid-template-rows: 56px 1fr; height: 100vh; }
+
+#sidebar {
+  grid-row: 1 / 3;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#sidebar-header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+#sidebar-header h1 { font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: .5px; }
+#sidebar-ref { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.upload-area {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* Seletor de Refs */
+#ref-selector-wrap { display: flex; flex-direction: column; gap: 5px; }
+#ref-selector-wrap label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+#ref-select {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--card2);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+#ref-select option:disabled { color: var(--muted); }
+#btn-carregar-ref {
+  width: 100%;
+  padding: 7px;
+  background: var(--accent);
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: .15s;
+}
+#btn-carregar-ref:hover { background: #2563eb; }
+
+/* Upload manual (fallback fora do pywebview) */
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--card);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+  transition: .2s;
+  width: 100%;
+}
+.upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+.upload-btn input { display: none; }
+.upload-btn.loaded { border-color: var(--green); color: var(--green); border-style: solid; }
+
+#assessor-list { flex: 1; overflow-y: auto; padding: 8px; }
+.assessor-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  margin-bottom: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  transition: .15s;
+  text-align: left;
+}
+.assessor-btn:hover { border-color: var(--accent); }
+.assessor-btn.active { border-color: var(--accent); background: #1e3a5f; color: #fff; }
+.assessor-btn .badge { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.assessor-btn.active .badge { color: var(--accent); }
+
+#topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+}
+#topbar h2 { font-size: 14px; font-weight: 600; min-width: 160px; }
+.counter-group { display: flex; gap: 12px; }
+.counter { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.counter span { color: var(--text); font-weight: 600; }
+#progress-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; min-width: 80px; }
+#progress-bar { height: 100%; background: var(--green); border-radius: 2px; transition: width .3s; width: 0%; }
+#search-input {
+  margin-left: auto;
+  padding: 6px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  width: 180px;
+}
+#search-input:focus { outline: none; border-color: var(--accent); }
+.top-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: .15s;
+  white-space: nowrap;
+}
+.top-btn:hover { border-color: var(--accent); color: var(--text); }
+
+#main { overflow: hidden; display: flex; flex-direction: column; }
+#tabs { display: flex; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.tab-btn {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: .15s;
+}
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+#filtros {
+  display: flex;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.filtro-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: .15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.filtro-btn:hover { border-color: var(--accent); color: var(--text); }
+.filtro-btn.active-green { border-color: var(--green); color: var(--green); background: rgba(34,197,94,.1); }
+.filtro-btn.active-amber { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,.1); }
+.filtro-count { font-family: var(--mono); font-size: 10px; }
+
+#content { flex: 1; overflow-y: auto; padding: 16px 20px; }
+
+.msg-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: .2s;
+}
+.msg-card:hover { border-color: #2a3f6a; }
+.msg-card.enviado { border-color: var(--green); opacity: .65; }
+.card-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--card2); }
+.card-conta { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+.card-nome { font-size: 13px; font-weight: 600; flex: 1; }
+.enviado-badge {
+  font-size: 10px;
+  background: rgba(34,197,94,.2);
+  color: var(--green);
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--green);
+}
+.card-contatos { display: flex; gap: 12px; padding: 6px 14px; font-size: 11px; color: var(--muted); }
+.card-contatos span { display: flex; align-items: center; gap: 4px; }
+.card-texto {
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  color: #a0aec0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.card-actions { display: flex; gap: 6px; padding: 8px 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.card-btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: .15s;
+}
+.card-btn:hover { background: var(--card2); color: var(--text); }
+.card-btn.wpp { border-color: #25d366; color: #25d366; }
+.card-btn.wpp:hover { background: rgba(37,211,102,.1); }
+.card-btn.mail { border-color: var(--accent); color: var(--accent); }
+.card-btn.mail:hover { background: rgba(59,130,246,.1); }
+.card-btn.pdf { border-color: var(--accent2); color: var(--accent2); }
+.card-btn.sent { border-color: var(--green); color: var(--green); }
+.card-meta { display: flex; gap: 12px; padding: 6px 14px 10px; flex-wrap: wrap; }
+.meta-item { display: flex; flex-direction: column; align-items: center; }
+.meta-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.meta-val { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.meta-val.green { color: var(--green); }
+.meta-val.red { color: var(--red); }
+.meta-val.amber { color: var(--amber); }
+
+#painel-cdi { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+#painel-cdi.visible { display: flex; }
+#stat-cards { display: flex; gap: 12px; padding: 16px 20px 0; flex-wrap: wrap; }
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 20px;
+  cursor: pointer;
+  transition: .15s;
+  min-width: 140px;
+}
+.stat-card:hover { border-color: var(--accent); }
+.stat-card.active { border-color: var(--accent); background: #1a3060; }
+.stat-card .sc-label { font-size: 11px; color: var(--muted); }
+.stat-card .sc-val { font-family: var(--mono); font-size: 24px; font-weight: 700; }
+
+#painel-controls { display: flex; align-items: center; gap: 12px; padding: 12px 20px; }
+#order-select {
+  padding: 6px 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+}
+#cdi-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.cdi-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+.cdi-card .cc-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.cdi-card .cc-nome { font-size: 13px; font-weight: 600; }
+.cdi-card .cc-conta { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+.bar-wrap { margin: 6px 0 2px; }
+.bar-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+.bar-track {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+/* linha de referência: 100% CDI no centro da barra (só modo CDI) */
+.bar-track.cdi-ref {
+  background: linear-gradient(
+    to right,
+    var(--border) calc(50% - 1px),
+    rgba(255,255,255,.28) calc(50% - 1px),
+    rgba(255,255,255,.28) calc(50% + 1px),
+    var(--border) calc(50% + 1px)
+  );
+}
+.bar-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+.bar-fill.green { background: var(--green); }
+.bar-fill.amber { background: var(--amber); }
+.bar-fill.red { background: var(--red); }
+.cc-ganhos { display: flex; gap: 16px; margin-top: 10px; font-size: 11px; }
+.cc-ganhos div { display: flex; flex-direction: column; }
+.cc-ganhos .gl { color: var(--muted); font-size: 9px; text-transform: uppercase; }
+.cc-ganhos .gv { font-family: var(--mono); font-weight: 600; }
+.hist-wrap { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.hist-label { font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+.hist-squares { display: flex; gap: 3px; flex-wrap: wrap; }
+.hs { width: 18px; height: 18px; border-radius: 3px; cursor: default; position: relative; }
+.hs[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 10px;
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+  color: var(--text);
+}
+.hist-summary { margin-top: 6px; font-size: 11px; color: var(--muted); display: flex; gap: 10px; }
+.hist-summary .hs-g { color: var(--green); }
+.hist-summary .hs-r { color: var(--red); }
+
+#empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  gap: 12px;
+}
+#empty .big { font-size: 48px; }
+#empty p { font-size: 14px; }
+
+/* ── Toggle CDI% / Rent% ── */
+.mode-toggle {
+  display: flex;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.mode-btn {
+  padding: 5px 13px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: .15s;
+  white-space: nowrap;
+}
+.mode-btn.active { background: var(--accent); color: #fff; }
+
+/* ── Toggle no modal ── */
+.modal-toggle {
+  display: flex;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.modal-mode-btn {
+  padding: 4px 11px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: .15s;
+}
+.modal-mode-btn.active { background: var(--accent2); color: #fff; }
+
+/* ── Botão "Ver posições" no card ── */
+.btn-ver-posicoes {
+  width: 100%;
+  padding: 7px 14px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: .15s;
+  font-family: var(--sans);
+  text-align: left;
+}
+.btn-ver-posicoes:hover:not(:disabled) { color: var(--accent); background: var(--card2); }
+.btn-ver-posicoes:disabled { cursor: default; opacity: .45; }
+
+/* ── Modal de posições ── */
+#modal-posicoes {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(2px);
+}
+#modal-box {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: min(700px, 92vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+#modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card2);
+}
+#modal-header .mh-nome { font-size: 15px; font-weight: 700; }
+#modal-header .mh-conta { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-top: 2px; }
+#modal-header .mh-total { font-size: 11px; color: var(--muted); margin-top: 4px; }
+#btn-fechar-modal {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: .15s;
+  flex-shrink: 0;
+}
+#btn-fechar-modal:hover { border-color: var(--red); color: var(--red); }
+#modal-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-col {
+  padding: 18px 22px;
+}
+.modal-col:first-child { border-right: 1px solid var(--border); }
+.modal-col-title {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.modal-pos-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.modal-pos-item:last-child { border-bottom: none; }
+.modal-pos-rank {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  width: 16px;
+  flex-shrink: 0;
+}
+.modal-pos-nome {
+  font-size: 12px;
+  color: var(--text);
+  flex: 1;
+  line-height: 1.4;
+}
+.modal-pos-ret {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.modal-pos-ret.green { color: var(--green); }
+.modal-pos-ret.red   { color: var(--red); }
+.modal-pos-ret.amber { color: var(--amber); }
+.modal-sem-dados {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 16px 0;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <h1>📊 XP Relatórios</h1>
+      <p id="sidebar-ref">Painel de envio de assessores</p>
+    </div>
+
+    <div class="upload-area">
+      <!-- Seletor de Refs (visível dentro do pywebview) -->
+      <div id="ref-selector-wrap" style="display:none">
+        <label>Referência</label>
+        <select id="ref-select"></select>
+        <button id="btn-carregar-ref">↻ Carregar ref selecionada</button>
+      </div>
+
+      <!-- Botão para selecionar pasta (aparece se não houver config salva) -->
+      <div id="btn-sel-pasta-wrap" style="display:none">
+        <button id="btn-sel-pasta" style="width:100%;padding:8px 12px;background:var(--card2);
+          border:1px dashed var(--accent);border-radius:8px;color:var(--accent);
+          font-size:12px;cursor:pointer;font-family:var(--sans)">
+          📁 Selecionar pasta de relatórios
+        </button>
+      </div>
+
+      <!-- Upload manual (fallback fora do pywebview) -->
+      <label class="upload-btn" id="lbl-json" style="display:none">
+        <span>📂</span><span id="lbl-json-text">Carregar mensagens_assessores.json</span>
+        <input type="file" id="input-json" accept=".json">
+      </label>
+    </div>
+
+    <div id="assessor-list"></div>
+  </aside>
+
+  <!-- ── TOPBAR ── -->
+  <header id="topbar">
+    <h2 id="topbar-title">Selecione um assessor</h2>
+    <div class="counter-group">
+      <div class="counter">Total <span id="cnt-total">0</span></div>
+      <div class="counter">Enviados <span id="cnt-enviados">0</span></div>
+      <div class="counter">Pendentes <span id="cnt-pendentes">0</span></div>
+    </div>
+    <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+    <input id="search-input" type="text" placeholder="Buscar conta ou nome…">
+    <button class="top-btn" id="btn-copiar-todas">Copiar todas</button>
+    <button class="top-btn" id="btn-limpar">Limpar envios</button>
+  </header>
+
+  <!-- ── MAIN ── -->
+  <main id="main">
+    <div id="tabs">
+      <div class="tab-btn active" data-tab="mensagens">Mensagens</div>
+      <div class="tab-btn" data-tab="painel">Painel CDI</div>
+    </div>
+
+    <div id="filtros">
+      <button class="filtro-btn active-green" data-f="todos">Todos <span class="filtro-count" id="fc-todos">0</span></button>
+      <button class="filtro-btn" data-f="acima-mes">↑ Acima CDI mês <span class="filtro-count" id="fc-acima-mes">0</span></button>
+      <button class="filtro-btn" data-f="abaixo-mes">↓ Abaixo CDI mês <span class="filtro-count" id="fc-abaixo-mes">0</span></button>
+      <button class="filtro-btn" data-f="acima-ano">↑ Acima CDI ano <span class="filtro-count" id="fc-acima-ano">0</span></button>
+      <button class="filtro-btn" data-f="abaixo-ano">↓ Abaixo CDI ano <span class="filtro-count" id="fc-abaixo-ano">0</span></button>
+      <button class="filtro-btn" data-f="chefe">★ Regra do chefe <span class="filtro-count" id="fc-chefe">0</span></button>
+    </div>
+
+    <div id="content">
+      <div id="empty">
+        <div class="big">📂</div>
+        <p>Carregue o JSON e selecione um assessor para começar.</p>
+      </div>
+      <div id="cards-wrap" style="display:none"></div>
+    </div>
+
+    <div id="painel-cdi">
+      <div id="stat-cards">
+        <div class="stat-card" id="sc-media">
+          <div class="sc-label">Média CDI mês</div>
+          <div class="sc-val" id="sv-media">—</div>
+        </div>
+        <div class="stat-card" id="sc-acima" data-filter="acima">
+          <div class="sc-label">Acima do CDI</div>
+          <div class="sc-val green" id="sv-acima">0</div>
+        </div>
+        <div class="stat-card" id="sc-abaixo" data-filter="abaixo">
+          <div class="sc-label">Abaixo do CDI</div>
+          <div class="sc-val red" id="sv-abaixo">0</div>
+        </div>
+        <div class="stat-card" id="sc-total-c">
+          <div class="sc-label">Total clientes</div>
+          <div class="sc-val" id="sv-total">0</div>
+        </div>
+      </div>
+
+      <div id="painel-controls">
+        <div class="mode-toggle">
+          <button class="mode-btn active" data-mode="cdi">% CDI</button>
+          <button class="mode-btn"        data-mode="rent">Rent. %</button>
+        </div>
+        <label style="font-size:12px;color:var(--muted);margin-left:4px">Ordenar:</label>
+        <select id="order-select">
+          <option value="cdi-mes-desc">CDI mês ↓</option>
+          <option value="cdi-mes-asc">CDI mês ↑</option>
+          <option value="cdi-ano-desc">CDI ano ↓</option>
+          <option value="cdi-ano-asc">CDI ano ↑</option>
+          <option value="rent-mes-desc">Rent. mês ↓</option>
+          <option value="rent-mes-asc">Rent. mês ↑</option>
+          <option value="rent-ano-desc">Rent. ano ↓</option>
+          <option value="rent-ano-asc">Rent. ano ↑</option>
+        </select>
+      </div>
+
+      <div id="cdi-grid"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════════
+let dadosJson     = {};
+let rentCdiData   = [];
+let assessorAtivo = null;
+let filtroAtivo   = 'todos';
+let cdiFilterAtivo= null;
+let tabAtiva      = 'mensagens';
+let termoBusca    = '';
+let pastaRaizAtiva= '';
+let modoExibicao  = 'cdi';   // 'cdi' | 'rent'
+let modoModal     = 'ret';   // 'ret' | 'cdi'
+let modalContaAtiva = null;
+let cdiTaxaMes    = 0.76;    // taxa CDI real do período (ex: 0.7626% em maio/2026)
+
+function calcularCdiTaxa(rentCdi) {
+  const rates = (rentCdi || [])
+    .filter(r => (r.cdi_mes || 0) > 10)
+    .map(r => parseFloat(String(r.rent_mes || '0').replace(',', '.')) / ((r.cdi_mes || 1) / 100));
+  return rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : 0.76;
+}
+
+// ═══════════════════════════════════════════════════
+// LOCAL STORAGE — ENVIOS
+// ═══════════════════════════════════════════════════
+const LS_KEY = () => `xp_enviados_${assessorAtivo}`;
+
+function enviados() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY()) || '{}'); }
+  catch { return {}; }
+}
+function marcarEnviado(conta) {
+  const e = enviados(); e[conta] = true;
+  localStorage.setItem(LS_KEY(), JSON.stringify(e));
+}
+function desmarcarEnviado(conta) {
+  const e = enviados(); delete e[conta];
+  localStorage.setItem(LS_KEY(), JSON.stringify(e));
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function normalizarItem(raw) {
+  if (typeof raw === 'string') {
+    return { texto: raw, conta: '', nome: '', telefone: '', email: '',
+             cdi_mes: null, cdi_ano: null, rent_mes: '–', rent_ano: '–',
+             ganho_mes: '–', ganho_ano: '–', historico: [],
+             meses_acima_24m: null, meses_abaixo_24m: null };
+  }
+  return raw;
+}
+
+function extrairContaNome(item) {
+  if (item.conta) return { conta: String(item.conta), nome: item.nome || '' };
+  const m = item.texto?.match(/_{10,}\n(\d+)\s*-\s*(.+)/);
+  if (m) return { conta: m[1].trim(), nome: m[2].trim() };
+  return { conta: '???', nome: '???' };
+}
+
+function textoLimpo(item) {
+  return (item.texto || '').replace(/^_{10,}\n[^\n]+\n\n/, '').trim();
+}
+
+function cdiColor(v) {
+  if (v == null) return '';
+  return v >= 100 ? 'green' : v >= 80 ? 'amber' : 'red';
+}
+function barClass(v) {
+  if (v == null) return 'red';
+  return v >= 100 ? 'green' : v >= 80 ? 'amber' : 'red';
+}
+function barWidth(v) {
+  if (v == null) return '0%';
+  return Math.min(Math.abs(v), 200) / 200 * 100 + '%';
+}
+
+// ═══════════════════════════════════════════════════
+// INIT — detecta ambiente
+// ═══════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  if (window.pywebview) {
+    window.pywebview.api.versao().then(v => {
+      // Prioridade: config salva no app.py > localStorage
+      pastaRaizAtiva = v.pasta_raiz || localStorage.getItem('xp_pasta_raiz') || '';
+      if (pastaRaizAtiva) {
+        carregarRefs(pastaRaizAtiva);
+      } else {
+        // Nenhuma pasta configurada: mostra botão para selecionar
+        document.getElementById('btn-sel-pasta-wrap').style.display = 'block';
+      }
+    });
+  } else {
+    document.getElementById('lbl-json').style.display = 'flex';
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// SELETOR DE REFS (pywebview)
+// ═══════════════════════════════════════════════════
+async function carregarRefs(pastaRaiz) {
+  try {
+    const refs = await window.pywebview.api.listar_refs(pastaRaiz);
+    const sel  = document.getElementById('ref-select');
+    sel.innerHTML = '';
+
+    if (!refs || refs.length === 0) {
+      const opt = document.createElement('option');
+      opt.textContent = 'Nenhuma ref encontrada';
+      sel.appendChild(opt);
+    } else {
+      for (const r of refs) {
+        const opt = document.createElement('option');
+        opt.value = r.json_path || '';
+        opt.textContent = r.nome + (r.tem_json ? ' ✓' : ' — sem dados');
+        if (!r.tem_json) opt.disabled = true;
+        sel.appendChild(opt);
+      }
+      const primeira = refs.find(r => r.tem_json);
+      if (primeira) await aplicarRef(primeira.json_path, primeira.nome);
+    }
+    document.getElementById('ref-selector-wrap').style.display = 'flex';
+    document.getElementById('btn-sel-pasta-wrap').style.display = 'none';
+  } catch(e) {
+    console.error('Erro ao listar refs:', e);
+    document.getElementById('lbl-json').style.display = 'flex';
+  }
+}
+
+async function aplicarRef(jsonPath, nomeRef) {
+  if (!jsonPath) return;
+  try {
+    const conteudo = await window.pywebview.api.carregar_ref(jsonPath);
+    const raw = JSON.parse(conteudo);
+    if (raw.erro) { console.error(raw.erro); return; }
+
+    // Extrai pasta_raiz do _meta (resolve problema do PDF)
+    if (raw._meta && raw._meta.pasta_raiz) {
+      pastaRaizAtiva = raw._meta.pasta_raiz;
+      localStorage.setItem('xp_pasta_raiz', pastaRaizAtiva);
+      // Persiste também no app.py para próximo start
+      window.pywebview.api.salvar_config(pastaRaizAtiva).catch(()=>{});
+    }
+
+    // Extrai _rent_cdi e calcula taxa CDI real do período
+    rentCdiData = raw._rent_cdi || [];
+    cdiTaxaMes  = calcularCdiTaxa(rentCdiData);
+
+    // Monta dadosJson só com assessores (ignora chaves especiais _*)
+    dadosJson = {};
+    for (const [ass, items] of Object.entries(raw)) {
+      if (ass.startsWith('_')) continue;
+      dadosJson[ass] = items.map(normalizarItem);
+    }
+
+    localStorage.setItem('xp_pasta_raiz', pastaRaizAtiva);
+
+    const refLabel = nomeRef || jsonPath.split(/[\\/]/).slice(-2,-1)[0] || '';
+    document.getElementById('sidebar-ref').textContent = refLabel ? `📅 ${refLabel}` : 'Painel de envio de assessores';
+
+    renderSidebar();
+
+    if (assessorAtivo && dadosJson[assessorAtivo]) {
+      renderFiltros(); renderCards();
+    } else {
+      assessorAtivo = null;
+      document.getElementById('topbar-title').textContent = 'Selecione um assessor';
+      document.getElementById('cards-wrap').style.display = 'none';
+      document.getElementById('empty').style.display = 'flex';
+    }
+  } catch(e) {
+    console.error('Erro ao aplicar ref:', e);
+  }
+}
+
+document.getElementById('btn-carregar-ref').addEventListener('click', () => {
+  const sel = document.getElementById('ref-select');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) return;
+  aplicarRef(opt.value, opt.textContent.replace(' ✓','').replace(' — sem dados','').trim());
+});
+
+// Botão para selecionar pasta quando não há config
+document.getElementById('btn-sel-pasta').addEventListener('click', async () => {
+  const pasta = await window.pywebview.api.escolher_pasta();
+  if (!pasta) return;
+  pastaRaizAtiva = pasta;
+  localStorage.setItem('xp_pasta_raiz', pasta);
+  window.pywebview.api.salvar_config(pasta).catch(()=>{});
+  document.getElementById('btn-sel-pasta-wrap').style.display = 'none';
+  carregarRefs(pasta);
+});
+
+// ═══════════════════════════════════════════════════
+// UPLOAD MANUAL (fallback fora do pywebview)
+// ═══════════════════════════════════════════════════
+document.getElementById('input-json').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const raw = JSON.parse(await f.text());
+    rentCdiData = raw._rent_cdi || [];
+    cdiTaxaMes  = calcularCdiTaxa(rentCdiData);
+    dadosJson = {};
+    for (const [ass, items] of Object.entries(raw)) {
+      if (ass.startsWith('_')) continue;
+      dadosJson[ass] = items.map(normalizarItem);
+    }
+    document.getElementById('lbl-json-text').textContent = f.name;
+    document.getElementById('lbl-json').classList.add('loaded');
+    renderSidebar();
+  } catch(err) { alert('Erro ao ler JSON: ' + err.message); }
+});
+
+// ═══════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════
+function renderSidebar() {
+  const list = document.getElementById('assessor-list');
+  list.innerHTML = '';
+  for (const [ass, items] of Object.entries(dadosJson)) {
+    let envCont = 0;
+    try { envCont = Object.keys(JSON.parse(localStorage.getItem(`xp_enviados_${ass}`) || '{}')).length; } catch {}
+    const btn = document.createElement('button');
+    btn.className = 'assessor-btn' + (ass === assessorAtivo ? ' active' : '');
+    btn.innerHTML = `<span>${ass}</span><span class="badge">${envCont}/${items.length}</span>`;
+    btn.addEventListener('click', () => selecionarAssessor(ass));
+    list.appendChild(btn);
+  }
+}
+
+function selecionarAssessor(ass) {
+  assessorAtivo = ass;
+  filtroAtivo   = 'todos';
+  termoBusca    = '';
+  document.getElementById('search-input').value = '';
+  renderSidebar();
+  document.getElementById('topbar-title').textContent = ass;
+  renderFiltros();
+  if (tabAtiva === 'mensagens') renderCards();
+  else renderPainelCDI();
+}
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabAtiva = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('filtros').style.display    = tabAtiva === 'mensagens' ? 'flex' : 'none';
+    document.getElementById('content').style.display    = tabAtiva === 'mensagens' ? '' : 'none';
+    document.getElementById('painel-cdi').classList.toggle('visible', tabAtiva === 'painel');
+    if (tabAtiva === 'painel') renderPainelCDI();
+    else renderCards();
+  });
+});
+
+// ═══════════════════════════════════════════════════
+// FILTROS
+// ═══════════════════════════════════════════════════
+document.querySelectorAll('.filtro-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    filtroAtivo = btn.dataset.f;
+    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active-green','active-amber'));
+    if (['todos','acima-mes','acima-ano'].includes(filtroAtivo)) btn.classList.add('active-green');
+    else btn.classList.add('active-amber');
+    renderCards();
+  });
+});
+
+function filtrarItem(item) {
+  const cdim = item.cdi_mes ?? 0;
+  const cdia = item.cdi_ano ?? 0;
+  switch(filtroAtivo) {
+    case 'acima-mes':  return cdim >= 100;
+    case 'abaixo-mes': return cdim <  100;
+    case 'acima-ano':  return cdia >= 100;
+    case 'abaixo-ano': return cdia <  100;
+    case 'chefe':      return cdim >= 100 && cdia < 100;
+    default:           return true;
+  }
+}
+
+function renderFiltros() {
+  if (!assessorAtivo) return;
+  const items = dadosJson[assessorAtivo] || [];
+  const fns = {
+    'todos':      () => true,
+    'acima-mes':  i => (i.cdi_mes??0) >= 100,
+    'abaixo-mes': i => (i.cdi_mes??0) <  100,
+    'acima-ano':  i => (i.cdi_ano??0) >= 100,
+    'abaixo-ano': i => (i.cdi_ano??0) <  100,
+    'chefe':      i => (i.cdi_mes??0) >= 100 && (i.cdi_ano??0) < 100,
+  };
+  const idMap = { 'todos':'fc-todos','acima-mes':'fc-acima-mes','abaixo-mes':'fc-abaixo-mes',
+                  'acima-ano':'fc-acima-ano','abaixo-ano':'fc-abaixo-ano','chefe':'fc-chefe' };
+  for (const [k, fn] of Object.entries(fns)) {
+    const el = document.getElementById(idMap[k]);
+    if (el) el.textContent = items.filter(fn).length;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// BUSCA
+// ═══════════════════════════════════════════════════
+document.getElementById('search-input').addEventListener('input', e => {
+  termoBusca = e.target.value.toLowerCase();
+  renderCards();
+});
+
+// ═══════════════════════════════════════════════════
+// TOPBAR BOTÕES
+// ═══════════════════════════════════════════════════
+document.getElementById('btn-copiar-todas').addEventListener('click', () => {
+  if (!assessorAtivo) return;
+  const items = (dadosJson[assessorAtivo] || []).filter(filtrarItem);
+  navigator.clipboard.writeText(items.map(i => textoLimpo(i)).join('\n\n' + '─'.repeat(40) + '\n\n'))
+    .then(() => alert(`${items.length} mensagens copiadas!`));
+});
+
+document.getElementById('btn-limpar').addEventListener('click', () => {
+  if (!assessorAtivo) return;
+  if (confirm('Limpar todos os envios marcados deste assessor?')) {
+    localStorage.removeItem(LS_KEY());
+    renderCards(); renderSidebar();
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// PDF
+// ═══════════════════════════════════════════════════
+async function abrirPdf(conta) {
+  if (!window.pywebview) { alert('App não conectado ao Python.'); return; }
+  const path = await window.pywebview.api.encontrar_pdf(conta, assessorAtivo, pastaRaizAtiva);
+  if (!path) { alert('PDF não encontrado para conta ' + conta); return; }
+  const res = await window.pywebview.api.abrir_pdf_sistema(path);
+  if (res && res.erro) alert('Erro ao abrir PDF:\n' + res.erro);
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER CARDS
+// ═══════════════════════════════════════════════════
+function renderCards() {
+  if (!assessorAtivo) return;
+  const wrap  = document.getElementById('cards-wrap');
+  const empty = document.getElementById('empty');
+  const items = dadosJson[assessorAtivo] || [];
+  const env   = enviados();
+
+  const filtered = items.filter(item => {
+    if (!filtrarItem(item)) return false;
+    if (!termoBusca) return true;
+    const cn = extrairContaNome(item);
+    return cn.conta.toLowerCase().includes(termoBusca) || (cn.nome||'').toLowerCase().includes(termoBusca);
+  });
+
+  if (filtered.length === 0) {
+    wrap.style.display = 'none'; empty.style.display = 'flex';
+    empty.querySelector('p').textContent = items.length === 0
+      ? 'Carregue o JSON e selecione um assessor.'
+      : 'Nenhum cliente corresponde ao filtro.';
+    atualizarContadores(); return;
+  }
+
+  wrap.style.display = 'block'; empty.style.display = 'none';
+  wrap.innerHTML = '';
+
+  for (const item of filtered) {
+    const cn     = extrairContaNome(item);
+    const isEnv  = !!env[cn.conta];
+    const txtLimpo = textoLimpo(item);
+
+    const cdiMStr = item.cdi_mes != null ? Number(item.cdi_mes).toFixed(1) + '%' : '—';
+    const cdiAStr = item.cdi_ano != null ? Number(item.cdi_ano).toFixed(1) + '%' : '—';
+    const cmC = cdiColor(item.cdi_mes);
+    const caC = cdiColor(item.cdi_ano);
+
+    const div = document.createElement('div');
+    div.className = 'msg-card' + (isEnv ? ' enviado' : '');
+    div.dataset.conta = cn.conta;
+    div.innerHTML = `
+      <div class="card-header">
+        <span class="card-conta">${cn.conta}</span>
+        <span class="card-nome">${cn.nome}</span>
+        ${isEnv ? '<span class="enviado-badge">✓ Enviado</span>' : ''}
+      </div>
+      <div class="card-contatos">
+        ${item.telefone ? `<span>📱 ${item.telefone}</span>` : ''}
+        ${item.email    ? `<span>✉️ ${item.email}</span>`    : ''}
+      </div>
+      <div class="card-texto">${txtLimpo}</div>
+      <div class="card-meta">
+        <div class="meta-item"><span class="meta-label">CDI Mês</span><span class="meta-val ${cmC}">${cdiMStr}</span></div>
+        <div class="meta-item"><span class="meta-label">CDI Ano</span><span class="meta-val ${caC}">${cdiAStr}</span></div>
+        <div class="meta-item"><span class="meta-label">Rent. Mês</span><span class="meta-val">${item.rent_mes ?? '—'}%</span></div>
+        <div class="meta-item"><span class="meta-label">Rent. Ano</span><span class="meta-val">${item.rent_ano ?? '—'}%</span></div>
+        <div class="meta-item"><span class="meta-label">Ganho Mês</span><span class="meta-val">R$ ${item.ganho_mes ?? '—'}</span></div>
+        <div class="meta-item"><span class="meta-label">Ganho Ano</span><span class="meta-val">R$ ${item.ganho_ano ?? '—'}</span></div>
+      </div>
+      <div class="card-actions">
+        <button class="card-btn" data-act="copiar-mes">Copiar mês</button>
+        <button class="card-btn" data-act="copiar-tudo">Copiar tudo</button>
+        ${item.telefone ? `<button class="card-btn wpp"  data-act="wpp">WhatsApp</button>` : ''}
+        ${item.email    ? `<button class="card-btn mail" data-act="email">E-mail</button>` : ''}
+        <button class="card-btn pdf"  data-act="pdf">PDF</button>
+        <button class="card-btn sent" data-act="toggle-env">${isEnv ? 'Desmarcar' : 'Marcar enviado'}</button>
+      </div>`;
+
+    div.querySelectorAll('[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => acaoCard(btn.dataset.act, item, cn, div, btn));
+    });
+    wrap.appendChild(div);
+  }
+  atualizarContadores();
+}
+
+function acaoCard(act, item, cn, div, btn) {
+  const txt = textoLimpo(item);
+
+  if (act === 'copiar-mes') {
+    const linhas = txt.split('\n').filter(l => l.trim());
+    navigator.clipboard.writeText(linhas.slice(0,2).join('\n'));
+    return;
+  }
+  if (act === 'copiar-tudo') {
+    navigator.clipboard.writeText(txt);
+    return;
+  }
+  if (act === 'wpp') {
+    const tel = (item.telefone||'').replace(/\D/g,'');
+    const num = tel.startsWith('55') ? tel : '55'+tel;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(txt)}`, '_blank');
+    marcarEnviado(cn.conta);
+    div.className = 'msg-card enviado';
+    renderSidebar(); atualizarContadores();
+    return;
+  }
+  if (act === 'email') {
+    const assunto = 'Relatório de Rentabilidade';
+    if (window.pywebview) {
+      btn.textContent = '⏳'; btn.disabled = true;
+      window.pywebview.api.encontrar_pdf(cn.conta, assessorAtivo, pastaRaizAtiva)
+        .then(pdfPath => window.pywebview.api.abrir_email_outlook(item.email||'', assunto, txt, pdfPath||''))
+        .then(res => {
+          btn.textContent = 'E-mail'; btn.disabled = false;
+          if (res && res.erro) { alert('Erro ao abrir Outlook:\n' + res.erro); return; }
+          marcarEnviado(cn.conta);
+          div.className = 'msg-card enviado';
+          renderSidebar(); atualizarContadores();
+        })
+        .catch(err => { btn.textContent = 'E-mail'; btn.disabled = false; alert('Erro:\n'+err); });
+    } else {
+      const link = document.createElement('a');
+      link.href = `mailto:${item.email||''}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(txt)}`;
+      link.click();
+    }
+    return;
+  }
+  if (act === 'pdf') {
+    abrirPdf(cn.conta);
+    return;
+  }
+  if (act === 'toggle-env') {
+    const env = enviados();
+    if (env[cn.conta]) {
+      desmarcarEnviado(cn.conta);
+      div.className = 'msg-card';
+      btn.textContent = 'Marcar enviado';
+    } else {
+      marcarEnviado(cn.conta);
+      div.className = 'msg-card enviado';
+      btn.textContent = 'Desmarcar';
+    }
+    renderSidebar(); atualizarContadores();
+  }
+}
+
+function atualizarContadores() {
+  if (!assessorAtivo) return;
+  const items = (dadosJson[assessorAtivo]||[]).filter(filtrarItem);
+  const env   = enviados();
+  const total = items.length;
+  const envC  = items.filter(i => env[extrairContaNome(i).conta]).length;
+  document.getElementById('cnt-total').textContent     = total;
+  document.getElementById('cnt-enviados').textContent  = envC;
+  document.getElementById('cnt-pendentes').textContent = total - envC;
+  document.getElementById('progress-bar').style.width  = total ? (envC/total*100)+'%' : '0%';
+}
+
+// ═══════════════════════════════════════════════════
+// PAINEL CDI
+// ═══════════════════════════════════════════════════
+document.getElementById('order-select').addEventListener('change', renderPainelCDI);
+
+// Toggle CDI% / Rent%
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    modoExibicao = btn.dataset.mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === modoExibicao));
+    renderPainelCDI();
+  });
+});
+
+document.querySelectorAll('.stat-card[data-filter]').forEach(sc => {
+  sc.addEventListener('click', () => {
+    const f = sc.dataset.filter;
+    if (cdiFilterAtivo === f) { cdiFilterAtivo = null; sc.classList.remove('active'); }
+    else {
+      cdiFilterAtivo = f;
+      document.querySelectorAll('.stat-card').forEach(s => s.classList.remove('active'));
+      sc.classList.add('active');
+    }
+    renderPainelCDI();
+  });
+});
+
+function parseRent(v) {
+  return parseFloat(String(v ?? '0').replace(',', '.')) || 0;
+}
+function barClassRent(v) {
+  // referência: cdiTaxaMes = 100% CDI
+  return v >= cdiTaxaMes ? 'green' : v >= cdiTaxaMes * 0.8 ? 'amber' : 'red';
+}
+function barWidthRent(v) {
+  // escala: 0 → 2×CDI, ponto médio = 1×CDI = 100% do CDI
+  const max = 2 * (cdiTaxaMes || 0.76);
+  return Math.min(Math.abs(v), max) / max * 100 + '%';
+}
+
+function renderPainelCDI() {
+  if (!assessorAtivo) return;
+  let items = dadosJson[assessorAtivo] || [];
+  if (cdiFilterAtivo === 'acima')  items = items.filter(i => (i.cdi_mes??0) >= 100);
+  if (cdiFilterAtivo === 'abaixo') items = items.filter(i => (i.cdi_mes??0) <  100);
+
+  const ord = document.getElementById('order-select').value;
+  items = [...items].sort((a, b) => {
+    let va, vb;
+    if (ord.startsWith('rent')) {
+      va = parseRent(ord.includes('mes') ? a.rent_mes : a.rent_ano);
+      vb = parseRent(ord.includes('mes') ? b.rent_mes : b.rent_ano);
+    } else {
+      va = (ord.includes('mes') ? a.cdi_mes : a.cdi_ano) ?? -Infinity;
+      vb = (ord.includes('mes') ? b.cdi_mes : b.cdi_ano) ?? -Infinity;
+    }
+    return ord.includes('asc') ? va - vb : vb - va;
+  });
+
+  const total = items.length;
+  const isCdi = modoExibicao === 'cdi';
+
+  if (isCdi) {
+    const acima = items.filter(i => (i.cdi_mes??0) >= 100).length;
+    const media = total ? (items.reduce((s,i) => s+(i.cdi_mes??0),0)/total).toFixed(1) : '—';
+    document.getElementById('sc-media').querySelector('.sc-label').textContent  = 'Média CDI mês';
+    document.getElementById('sc-acima').querySelector('.sc-label').textContent  = 'Acima do CDI';
+    document.getElementById('sc-abaixo').querySelector('.sc-label').textContent = 'Abaixo do CDI';
+    document.getElementById('sv-media').textContent  = media + '%';
+    document.getElementById('sv-acima').textContent  = acima;
+    document.getElementById('sv-abaixo').textContent = total - acima;
+  } else {
+    const positivos = items.filter(i => parseRent(i.rent_mes) > 0).length;
+    const mediaRent = total ? (items.reduce((s,i) => s+parseRent(i.rent_mes),0)/total).toFixed(2) : '—';
+    document.getElementById('sc-media').querySelector('.sc-label').textContent  = 'Média Rent. mês';
+    document.getElementById('sc-acima').querySelector('.sc-label').textContent  = 'Rent. positiva';
+    document.getElementById('sc-abaixo').querySelector('.sc-label').textContent = 'Rent. negativa';
+    document.getElementById('sv-media').textContent  = mediaRent + '%';
+    document.getElementById('sv-acima').textContent  = positivos;
+    document.getElementById('sv-abaixo').textContent = total - positivos;
+  }
+  document.getElementById('sv-total').textContent = total;
+
+  const grid = document.getElementById('cdi-grid');
+  grid.innerHTML = '';
+
+  for (const item of items) {
+    const cn    = extrairContaNome(item);
+    const cdim  = item.cdi_mes ?? 0;
+    const cdia  = item.cdi_ano ?? 0;
+    const rentM = parseRent(item.rent_mes);
+    const rentA = parseRent(item.rent_ano);
+    const ult12 = (item.historico||[]).slice(-12);
+
+
+    const squares = ult12.map(h => {
+      const cor = (h.cdi_pct??0) >= 100 ? '#22c55e' : '#ef4444';
+      return `<div class="hs" style="background:${cor}" title="${h.mes}: ${h.cdi_pct?.toFixed(1)??'?'}% CDI"></div>`;
+    }).join('');
+    const acimaCnt  = ult12.filter(h => (h.cdi_pct??0) >= 100).length;
+    const abaixoCnt = ult12.length - acimaCnt;
+    const a24 = item.meses_acima_24m, b24 = item.meses_abaixo_24m;
+    const stat24 = (a24!=null && b24!=null)
+      ? `<span style="font-size:10px;color:var(--muted)">24M: <span style="color:var(--green)">▲${a24}</span> <span style="color:var(--red)">▼${b24}</span></span>`
+      : '';
+
+    // barras conforme modo
+    let bar1, bar2;
+    if (isCdi) {
+      bar1 = `<div class="bar-wrap">
+        <div class="bar-label"><span>CDI Mês</span><span class="${barClass(cdim)}">${Number(cdim).toFixed(1)}%</span></div>
+        <div class="bar-track cdi-ref"><div class="bar-fill ${barClass(cdim)}" style="width:${barWidth(cdim)}"></div></div>
+      </div>`;
+      bar2 = `<div class="bar-wrap">
+        <div class="bar-label"><span>CDI Ano</span><span class="${barClass(cdia)}">${Number(cdia).toFixed(1)}%</span></div>
+        <div class="bar-track cdi-ref"><div class="bar-fill ${barClass(cdia)}" style="width:${barWidth(cdia)}"></div></div>
+      </div>`;
+    } else {
+      const clsM = barClassRent(rentM), clsA = barClassRent(rentA);
+      const cdiLabel = cdiTaxaMes > 0 ? ` (CDI≈${cdiTaxaMes.toFixed(2)}%)` : '';
+      bar1 = `<div class="bar-wrap">
+        <div class="bar-label"><span>Rent. Mês${cdiLabel}</span><span class="${clsM}">${rentM.toFixed(2)}%</span></div>
+        <div class="bar-track cdi-ref"><div class="bar-fill ${clsM}" style="width:${barWidthRent(rentM)}"></div></div>
+      </div>`;
+      bar2 = `<div class="bar-wrap">
+        <div class="bar-label"><span>Rent. Ano</span><span class="${clsA}">${rentA.toFixed(2)}%</span></div>
+        <div class="bar-track"><div class="bar-fill ${clsA}" style="width:${barWidthRent(rentA)}"></div></div>
+      </div>`;
+    }
+
+    const ativos = item.ativos || [];
+    const hasPos = ativos.length > 0;
+    if (!window._posData) window._posData = {};
+    window._posData[cn.conta] = { ativos, nome: cn.nome, conta: cn.conta };
+
+    const div = document.createElement('div');
+    div.className = 'cdi-card';
+    div.innerHTML = `
+      <div class="cc-header">
+        <span class="cc-nome">${cn.nome}</span>
+        <span class="cc-conta">${cn.conta}</span>
+      </div>
+      ${bar1}${bar2}
+      <div class="cc-ganhos">
+        <div><span class="gl">Ganho Mês</span><span class="gv">R$ ${item.ganho_mes??'—'}</span></div>
+        <div><span class="gl">Ganho Ano</span><span class="gv">R$ ${item.ganho_ano??'—'}</span></div>
+      </div>
+      ${ult12.length > 0 ? `
+      <div class="hist-wrap">
+        <div class="hist-label">Histórico 12M</div>
+        <div class="hist-squares">${squares}</div>
+        <div class="hist-summary">
+          <span class="hs-g">▲ ${acimaCnt} acima</span>
+          <span class="hs-r">▼ ${abaixoCnt} abaixo</span>
+          ${stat24}
+        </div>
+      </div>` : ''}
+      <button class="btn-ver-posicoes" ${hasPos ? `onclick="abrirModalPosicoes('${cn.conta}')"` : 'disabled'}>
+        ${hasPos ? `▦ Ver posições (${ativos.length} ativos)` : '— Sem dados de posição'}
+      </button>`;
+    grid.appendChild(div);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// MODAL DE POSIÇÕES
+// ═══════════════════════════════════════════════════
+function abrirModalPosicoes(conta) {
+  const d = window._posData?.[conta];
+  if (!d) return;
+  modalContaAtiva = conta;
+  modoModal = 'ret';
+  document.querySelectorAll('.modal-mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mmode === 'ret'));
+  document.getElementById('modal-mh-nome').textContent  = d.nome;
+  document.getElementById('modal-mh-conta').textContent = `Conta ${conta}`;
+  document.getElementById('modal-mh-total').textContent = `${d.ativos.length} ativos no período`;
+  renderModalLists();
+  document.getElementById('modal-posicoes').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function renderModalLists() {
+  const d = window._posData?.[modalContaAtiva];
+  if (!d) return;
+
+  const useCdi = modoModal === 'cdi';
+  const taxa   = cdiTaxaMes || 0.76;
+  const suffix = useCdi ? '% CDI' : '%';
+  const getVal = a => useCdi ? (a.retorno / taxa * 100) : a.retorno;
+
+  // ranking sempre pelo retorno bruto — só o display muda
+  const top5    = d.ativos.slice(0, 5);
+  const bottom5 = d.ativos.length > 5 ? [...d.ativos].slice(-5).reverse() : [];
+
+  const mkItem = (a, rank) => {
+    const v   = getVal(a);
+    const cls = v > (useCdi ? 100 : taxa * 0.8) ? 'green' : v < 0 ? 'red' : 'amber';
+    const sig = v > 0 ? '+' : '';
+    return `<div class="modal-pos-item">
+      <span class="modal-pos-rank">${rank}</span>
+      <span class="modal-pos-nome">${a.nome}</span>
+      <span class="modal-pos-ret ${cls}">${sig}${v.toFixed(useCdi ? 0 : 2)}${suffix}</span>
+    </div>`;
+  };
+
+  document.getElementById('modal-win-list').innerHTML =
+    top5.length ? top5.map((a, i) => mkItem(a, i + 1)).join('') :
+    '<div class="modal-sem-dados">Sem dados</div>';
+
+  document.getElementById('modal-lose-list').innerHTML =
+    bottom5.length ? bottom5.map((a, i) => mkItem(a, i + 1)).join('') :
+    '<div class="modal-sem-dados">Menos de 6 ativos</div>';
+}
+
+function fecharModal() {
+  document.getElementById('modal-posicoes').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
+
+document.getElementById('modal-posicoes').addEventListener('click', e => {
+  const btn = e.target.closest('.modal-mode-btn');
+  if (!btn) return;
+  modoModal = btn.dataset.mmode;
+  document.querySelectorAll('.modal-mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mmode === modoModal));
+  renderModalLists();
+});
+</script>
+
+<!-- ── Modal de Posições ── -->
+<div id="modal-posicoes" style="display:none">
+  <div id="modal-overlay" onclick="fecharModal()"></div>
+  <div id="modal-box">
+    <div id="modal-header">
+      <div>
+        <div class="mh-nome" id="modal-mh-nome"></div>
+        <div class="mh-conta" id="modal-mh-conta"></div>
+        <div class="mh-total" id="modal-mh-total"></div>
+        <div class="modal-toggle" style="margin-top:10px">
+          <button class="modal-mode-btn active" data-mmode="ret">Retorno %</button>
+          <button class="modal-mode-btn"        data-mmode="cdi">% CDI</button>
+        </div>
+      </div>
+      <button id="btn-fechar-modal" onclick="fecharModal()">✕</button>
+    </div>
+    <div id="modal-body">
+      <div class="modal-col">
+        <div class="modal-col-title">🏆 Top 5 Melhores</div>
+        <div id="modal-win-list"></div>
+      </div>
+      <div class="modal-col">
+        <div class="modal-col-title">📉 Top 5 Piores</div>
+        <div id="modal-lose-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
