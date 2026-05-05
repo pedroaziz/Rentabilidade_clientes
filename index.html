@@ -1,4 +1,4 @@
-<!DOCTYPE html>  
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -6,6 +6,7 @@
 <title>XP Relatórios — Assessores</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg: #0a0f1e;
@@ -423,6 +424,135 @@ html, body { height: 100%; font-family: var(--sans); background: var(--bg); colo
 .btn-ver-posicoes:hover:not(:disabled) { color: var(--accent); background: var(--card2); }
 .btn-ver-posicoes:disabled { cursor: default; opacity: .45; }
 
+/* ── Busca no painel ── */
+#busca-painel {
+  flex: 1;
+  min-width: 140px;
+  max-width: 220px;
+  padding: 5px 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--sans);
+  outline: none;
+  transition: .15s;
+}
+#busca-painel:focus { border-color: var(--accent); }
+#busca-painel::placeholder { color: var(--muted); }
+
+/* ── Toggle cards/tabela ── */
+.view-btn {
+  padding: 5px 11px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: .15s;
+  white-space: nowrap;
+}
+.view-btn.active { background: var(--accent2); color: #fff; }
+
+/* ── Botões de export ── */
+.export-btns { display: flex; gap: 6px; }
+.export-btns button {
+  padding: 5px 11px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: .15s;
+  white-space: nowrap;
+}
+.export-btns button:hover { border-color: var(--green); color: var(--green); }
+
+/* ── Badge de risco (3+ meses abaixo CDI) ── */
+.risco-badge {
+  font-size: 10px;
+  background: rgba(239,68,68,.18);
+  border: 1px solid rgba(239,68,68,.4);
+  color: var(--red);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── Tendência mês-a-mês ── */
+.trend-up   { color: var(--green); font-size: 11px; font-weight: 700; }
+.trend-down { color: var(--red);   font-size: 11px; font-weight: 700; }
+.trend-flat { color: var(--muted); font-size: 11px; }
+
+/* ── Filtros rápidos da tabela ── */
+#tabela-filtros {
+  display: none;
+  gap: 6px;
+  padding: 0 20px 10px;
+  flex-wrap: wrap;
+}
+#tabela-filtros.visible { display: flex; }
+.tabela-chip {
+  padding: 4px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: .15s;
+  white-space: nowrap;
+}
+.tabela-chip:hover { border-color: var(--accent); color: var(--text); }
+.tabela-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tabela-chip.chip-risco.active { background: var(--red); border-color: var(--red); }
+.tabela-chip.chip-atencao.active { background: var(--amber); border-color: var(--amber); color: #000; }
+.tabela-chip.chip-rec.active { background: var(--green); border-color: var(--green); }
+
+/* ── Visão de tabela ── */
+#cdi-grid.table-view {
+  display: block;
+  overflow-x: auto;
+}
+#cdi-grid.table-view table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+#cdi-grid.table-view th {
+  background: var(--card2);
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+}
+#cdi-grid.table-view th:hover { color: var(--text); }
+#cdi-grid.table-view td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+#cdi-grid.table-view tr:hover td { background: var(--card2); }
+#cdi-grid.table-view .td-nome { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+#cdi-grid.table-view .td-hist { display: flex; gap: 2px; }
+#cdi-grid.table-view .ths { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
 /* ── Modal de posições ── */
 #modal-posicoes {
   position: fixed;
@@ -526,6 +656,44 @@ html, body { height: 100%; font-family: var(--sans); background: var(--bg); colo
 .modal-pos-ret.green { color: var(--green); }
 .modal-pos-ret.red   { color: var(--red); }
 .modal-pos-ret.amber { color: var(--amber); }
+
+/* ── Score de prioridade ── */
+.score-badge { font-size: 9px; font-weight: 700; border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+.score-urgente { background: rgba(239,68,68,.2); color: var(--red); border: 1px solid rgba(239,68,68,.4); }
+.score-atencao { background: rgba(245,158,11,.2); color: var(--amber); border: 1px solid rgba(245,158,11,.4); }
+.score-ok      { background: rgba(34,197,94,.15); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+/* ── Badge recuperação ── */
+.rec-badge { font-size: 9px; font-weight: 700; background: rgba(34,197,94,.18); border: 1px solid rgba(34,197,94,.4); color: var(--green); border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+/* ── Badge outlier ── */
+.outlier-badge { font-size: 9px; font-weight: 700; background: rgba(99,102,241,.2); border: 1px solid rgba(99,102,241,.4); color: var(--accent2); border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+
+/* ── Modal Concentração ── */
+#modal-conc { position: fixed; inset: 0; z-index: 1001; display: flex; align-items: center; justify-content: center; }
+#modal-conc-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(2px); }
+#modal-conc-box {
+  position: relative; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; width: min(760px, 94vw); max-height: 85vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+#modal-conc-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+#modal-conc-header h3 { font-size: 15px; font-weight: 700; }
+#modal-conc-body { overflow-y: auto; padding: 16px 20px; }
+.conc-section-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin: 16px 0 8px; }
+.conc-section-title:first-child { margin-top: 0; }
+.conc-row { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; overflow: hidden; }
+.conc-row-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; transition: .15s; }
+.conc-row-header:hover { background: var(--card2); }
+.conc-ativo-nome { font-weight: 700; font-size: 13px; flex: 1; }
+.conc-count { font-family: var(--mono); font-size: 11px; background: var(--card2); border: 1px solid var(--border); border-radius: 20px; padding: 2px 9px; }
+.conc-avg { font-family: var(--mono); font-size: 12px; font-weight: 700; }
+.conc-neg-badge { font-size: 10px; font-weight: 700; background: rgba(239,68,68,.18); color: var(--red); border-radius: 4px; padding: 2px 7px; }
+.conc-expand { color: var(--muted); font-size: 12px; }
+.conc-clients { display: none; border-top: 1px solid var(--border); padding: 8px 14px; flex-direction: column; gap: 4px; }
+.conc-clients.open { display: flex; }
+.conc-client-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.conc-client-row:last-child { border-bottom: none; }
+.conc-vazio { color: var(--muted); font-size: 13px; text-align: center; padding: 28px; }
 .modal-sem-dados {
   color: var(--muted);
   font-size: 12px;
@@ -623,6 +791,10 @@ html, body { height: 100%; font-family: var(--sans); background: var(--bg); colo
           <div class="sc-label">Abaixo do CDI</div>
           <div class="sc-val red" id="sv-abaixo">0</div>
         </div>
+        <div class="stat-card" id="sc-urgentes" data-filter="urgente">
+          <div class="sc-label">Score Urgente</div>
+          <div class="sc-val red" id="sv-urgentes">0</div>
+        </div>
         <div class="stat-card" id="sc-total-c">
           <div class="sc-label">Total clientes</div>
           <div class="sc-val" id="sv-total">0</div>
@@ -645,8 +817,19 @@ html, body { height: 100%; font-family: var(--sans); background: var(--bg); colo
           <option value="rent-ano-desc">Rent. ano ↓</option>
           <option value="rent-ano-asc">Rent. ano ↑</option>
         </select>
+        <input id="busca-painel" type="text" placeholder="🔍 Buscar cliente..." autocomplete="off">
+        <div class="mode-toggle">
+          <button class="view-btn active" data-view="cards">⊞ Cards</button>
+          <button class="view-btn"        data-view="table">≡ Tabela</button>
+        </div>
+        <div class="export-btns">
+          <button onclick="exportarCSV()">↓ CSV</button>
+          <button onclick="exportarExcel()">↓ Excel</button>
+          <button onclick="abrirModalConcentracao()" style="border-color:var(--accent2);color:var(--accent2)">⊗ Concentração</button>
+        </div>
       </div>
 
+      <div id="tabela-filtros"></div>
       <div id="cdi-grid"></div>
     </div>
   </main>
@@ -664,16 +847,27 @@ let cdiFilterAtivo= null;
 let tabAtiva      = 'mensagens';
 let termoBusca    = '';
 let pastaRaizAtiva= '';
-let modoExibicao  = 'cdi';   // 'cdi' | 'rent'
-let modoModal     = 'ret';   // 'ret' | 'cdi'
-let modalContaAtiva = null;
-let cdiTaxaMes    = 0.76;    // taxa CDI real do período (ex: 0.7626% em maio/2026)
+let modoExibicao       = 'cdi';    // 'cdi' | 'rent'
+let modoModal          = 'ret';    // 'ret' | 'cdi'
+let modalContaAtiva    = null;
+let cdiTaxaMes         = 0.76;    // taxa CDI mensal real do período
+let cdiTaxaAno         = 4.20;    // taxa CDI anual real do período
+let buscaPainel        = '';      // texto da busca no painel CDI
+let modoVisualizacao   = 'cards'; // 'cards' | 'table'
+let tabelaFiltroRapido = 'todos'; // chip ativo na tabela
+let _itensFiltrados    = [];      // cache para export
 
 function calcularCdiTaxa(rentCdi) {
   const rates = (rentCdi || [])
     .filter(r => (r.cdi_mes || 0) > 10)
     .map(r => parseFloat(String(r.rent_mes || '0').replace(',', '.')) / ((r.cdi_mes || 1) / 100));
   return rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : 0.76;
+}
+function calcularCdiTaxaAno(rentCdi) {
+  const rates = (rentCdi || [])
+    .filter(r => (r.cdi_ano || 0) > 10)
+    .map(r => parseFloat(String(r.rent_ano || '0').replace(',', '.')) / ((r.cdi_ano || 1) / 100));
+  return rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : 4.20;
 }
 
 // ═══════════════════════════════════════════════════
@@ -801,6 +995,7 @@ async function aplicarRef(jsonPath, nomeRef) {
     // Extrai _rent_cdi e calcula taxa CDI real do período
     rentCdiData = raw._rent_cdi || [];
     cdiTaxaMes  = calcularCdiTaxa(rentCdiData);
+    cdiTaxaAno  = calcularCdiTaxaAno(rentCdiData);
 
     // Monta dadosJson só com assessores (ignora chaves especiais _*)
     dadosJson = {};
@@ -856,6 +1051,7 @@ document.getElementById('input-json').addEventListener('change', async e => {
     const raw = JSON.parse(await f.text());
     rentCdiData = raw._rent_cdi || [];
     cdiTaxaMes  = calcularCdiTaxa(rentCdiData);
+    cdiTaxaAno  = calcularCdiTaxaAno(rentCdiData);
     dadosJson = {};
     for (const [ass, items] of Object.entries(raw)) {
       if (ass.startsWith('_')) continue;
@@ -1149,11 +1345,25 @@ function atualizarContadores() {
 // ═══════════════════════════════════════════════════
 document.getElementById('order-select').addEventListener('change', renderPainelCDI);
 
+document.getElementById('busca-painel').addEventListener('input', e => {
+  buscaPainel = e.target.value;
+  renderPainelCDI();
+});
+
 // Toggle CDI% / Rent%
 document.querySelectorAll('.mode-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     modoExibicao = btn.dataset.mode;
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === modoExibicao));
+    renderPainelCDI();
+  });
+});
+
+// Toggle Cards / Tabela
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    modoVisualizacao = btn.dataset.view;
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === modoVisualizacao));
     renderPainelCDI();
   });
 });
@@ -1174,21 +1384,64 @@ document.querySelectorAll('.stat-card[data-filter]').forEach(sc => {
 function parseRent(v) {
   return parseFloat(String(v ?? '0').replace(',', '.')) || 0;
 }
-function barClassRent(v) {
-  // referência: cdiTaxaMes = 100% CDI
-  return v >= cdiTaxaMes ? 'green' : v >= cdiTaxaMes * 0.8 ? 'amber' : 'red';
+function parseGanho(v) {
+  if (!v || v === '—') return 0;
+  return parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0;
 }
-function barWidthRent(v) {
-  // escala: 0 → 2×CDI, ponto médio = 1×CDI = 100% do CDI
-  const max = 2 * (cdiTaxaMes || 0.76);
-  return Math.min(Math.abs(v), max) / max * 100 + '%';
+function setTabelaFiltro(id) {
+  tabelaFiltroRapido = id;
+  renderPainelCDI();
+}
+function rentParaCdi(v) {
+  const taxa = cdiTaxaMes || 0.76;
+  return taxa > 0 ? v / taxa * 100 : 0;
+}
+function rentParaCdiAno(v) {
+  const taxa = cdiTaxaAno || 4.20;
+  return taxa > 0 ? v / taxa * 100 : 0;
+}
+
+function isRisco(item) {
+  const hist = (item.historico || []).slice(-3);
+  return hist.length === 3 && hist.every(h => (h.cdi_pct ?? 0) < 100);
+}
+
+function tendencia(item) {
+  const hist = item.historico || [];
+  if (hist.length < 2) return null;
+  const curr = hist[hist.length - 1]?.cdi_pct ?? 0;
+  const prev = hist[hist.length - 2]?.cdi_pct ?? 0;
+  const delta = curr - prev;
+  if (Math.abs(delta) < 0.5) return { sinal: '→', cls: 'trend-flat', delta, curr, prev };
+  return delta > 0
+    ? { sinal: '↑', cls: 'trend-up',   delta, curr, prev }
+    : { sinal: '↓', cls: 'trend-down', delta, curr, prev };
 }
 
 function renderPainelCDI() {
   if (!assessorAtivo) return;
+
+  // Outlier detection — baseado em TODOS os clientes, antes de filtrar
+  const _all     = dadosJson[assessorAtivo] || [];
+  const _cdiVals = _all.map(i => i.cdi_mes ?? 0).filter(v => v > 0);
+  const _mean    = _cdiVals.length ? _cdiVals.reduce((a,b) => a+b,0) / _cdiVals.length : 100;
+  const _std     = _cdiVals.length > 1
+    ? Math.sqrt(_cdiVals.reduce((s,v) => s+(v-_mean)**2,0) / _cdiVals.length) : 0;
+  const isOutlier = i => _std > 5 && Math.abs((i.cdi_mes ?? 0) - _mean) > 2 * _std;
+
   let items = dadosJson[assessorAtivo] || [];
-  if (cdiFilterAtivo === 'acima')  items = items.filter(i => (i.cdi_mes??0) >= 100);
-  if (cdiFilterAtivo === 'abaixo') items = items.filter(i => (i.cdi_mes??0) <  100);
+  if (cdiFilterAtivo === 'acima')   items = items.filter(i => (i.cdi_mes??0) >= 100);
+  if (cdiFilterAtivo === 'abaixo')  items = items.filter(i => (i.cdi_mes??0) <  100);
+  if (cdiFilterAtivo === 'urgente') items = items.filter(i => calcularScore(i) >= 60);
+
+  // busca por nome/conta
+  if (buscaPainel.trim()) {
+    const q = buscaPainel.trim().toLowerCase();
+    items = items.filter(i => {
+      const cn = extrairContaNome(i);
+      return cn.nome.toLowerCase().includes(q) || cn.conta.includes(q);
+    });
+  }
 
   const ord = document.getElementById('order-select').value;
   items = [...items].sort((a, b) => {
@@ -1202,6 +1455,48 @@ function renderPainelCDI() {
     }
     return ord.includes('asc') ? va - vb : vb - va;
   });
+
+  // Filtros rápidos + chips da tabela
+  const filtrosEl = document.getElementById('tabela-filtros');
+  if (modoVisualizacao === 'table') {
+    filtrosEl.classList.add('visible');
+    const nRisco  = items.filter(isRisco).length;
+    const nRecup  = items.filter(i => { const t = tendencia(i); return t && t.delta > 5; }).length;
+    const nAtenc  = items.filter(i => { const t = tendencia(i); return t && t.delta < -5 && (i.cdi_mes??0) < 100; }).length;
+    const chips = [
+      { id:'todos',       label:`Todos (${items.length})`,     cls:'' },
+      { id:'top-ganho',   label:`💰 Top 15 Ganho Mês`,                      cls:'' },
+      { id:'menor-ganho', label:`📉 15 Menor Ganho`,                        cls:'' },
+      { id:'em-risco',    label:`⚠ Risco 3M (${nRisco})`,                  cls:'chip-risco' },
+      { id:'urgente',     label:`🔴 Urgente (${items.filter(i=>calcularScore(i)>=60).length})`, cls:'chip-risco' },
+      { id:'recuperando', label:`🔄 Voltou ao CDI (${nRecup})`,             cls:'chip-rec' },
+      { id:'atencao',     label:`↓ Atenção (${nAtenc})`,                    cls:'chip-atencao' },
+      { id:'outlier',     label:`⚡ Outlier (${items.filter(isOutlier).length})`, cls:'' },
+    ];
+    filtrosEl.innerHTML = chips.map(c =>
+      `<button class="tabela-chip ${c.cls}${tabelaFiltroRapido===c.id?' active':''}" onclick="setTabelaFiltro('${c.id}')">${c.label}</button>`
+    ).join('');
+    if (tabelaFiltroRapido === 'top-ganho') {
+      items = [...items].sort((a,b) => parseGanho(b.ganho_mes) - parseGanho(a.ganho_mes)).slice(0, 15);
+    } else if (tabelaFiltroRapido === 'menor-ganho') {
+      items = [...items].sort((a,b) => parseGanho(a.ganho_mes) - parseGanho(b.ganho_mes)).slice(0, 15);
+    } else if (tabelaFiltroRapido === 'em-risco') {
+      items = items.filter(isRisco);
+    } else if (tabelaFiltroRapido === 'urgente') {
+      items = items.filter(i => calcularScore(i) >= 60);
+    } else if (tabelaFiltroRapido === 'recuperando') {
+      items = items.filter(isRecuperando);
+    } else if (tabelaFiltroRapido === 'atencao') {
+      items = items.filter(i => { const t = tendencia(i); return t && t.delta < -5 && (i.cdi_mes??0) < 100; });
+    } else if (tabelaFiltroRapido === 'outlier') {
+      items = items.filter(isOutlier);
+    }
+  } else {
+    filtrosEl.classList.remove('visible');
+    tabelaFiltroRapido = 'todos';
+  }
+
+  _itensFiltrados = items; // cache para export
 
   const total = items.length;
   const isCdi = modoExibicao === 'cdi';
@@ -1225,10 +1520,18 @@ function renderPainelCDI() {
     document.getElementById('sv-acima').textContent  = positivos;
     document.getElementById('sv-abaixo').textContent = total - positivos;
   }
-  document.getElementById('sv-total').textContent = total;
+  document.getElementById('sv-total').textContent    = total;
+  document.getElementById('sv-urgentes').textContent = _all.filter(i => calcularScore(i) >= 60).length;
 
   const grid = document.getElementById('cdi-grid');
   grid.innerHTML = '';
+
+  if (modoVisualizacao === 'table') {
+    grid.classList.add('table-view');
+    renderPainelCDITabela(items, isCdi, isOutlier);
+    return;
+  }
+  grid.classList.remove('table-view');
 
   for (const item of items) {
     const cn    = extrairContaNome(item);
@@ -1237,7 +1540,6 @@ function renderPainelCDI() {
     const rentM = parseRent(item.rent_mes);
     const rentA = parseRent(item.rent_ano);
     const ult12 = (item.historico||[]).slice(-12);
-
 
     const squares = ult12.map(h => {
       const cor = (h.cdi_pct??0) >= 100 ? '#22c55e' : '#ef4444';
@@ -1250,7 +1552,20 @@ function renderPainelCDI() {
       ? `<span style="font-size:10px;color:var(--muted)">24M: <span style="color:var(--green)">▲${a24}</span> <span style="color:var(--red)">▼${b24}</span></span>`
       : '';
 
-    // barras conforme modo
+    const risco  = isRisco(item);
+    const recup  = isRecuperando(item);
+    const out    = isOutlier(item);
+    const score  = calcularScore(item);
+    const tend   = tendencia(item);
+
+    const scoreBadge  = `<span class="score-badge ${scoreCls(score)}" title="Score de prioridade: ${score}/100">${scoreLabel(score)}</span>`;
+    const riscoBadge  = risco ? `<span class="risco-badge" title="3 meses consecutivos abaixo do CDI">⚠ Risco</span>` : '';
+    const recupBadge  = recup ? `<span class="rec-badge" title="Voltou a superar o CDI este mês">🔄 Voltou ao CDI</span>` : '';
+    const outlierBadge = out  ? `<span class="outlier-badge" title="CDI ${cdim.toFixed(1)}% — muito acima ou abaixo da média do assessor (${_mean.toFixed(1)}%)">⚡ Outlier</span>` : '';
+    const tendSpan = tend
+      ? `<span class="${tend.cls}" title="vs mês anterior">${tend.sinal} ${tend.prev.toFixed(0)}%→${tend.curr.toFixed(0)}%</span>`
+      : '';
+
     let bar1, bar2;
     if (isCdi) {
       bar1 = `<div class="bar-wrap">
@@ -1262,15 +1577,18 @@ function renderPainelCDI() {
         <div class="bar-track cdi-ref"><div class="bar-fill ${barClass(cdia)}" style="width:${barWidth(cdia)}"></div></div>
       </div>`;
     } else {
-      const clsM = barClassRent(rentM), clsA = barClassRent(rentA);
-      const cdiLabel = cdiTaxaMes > 0 ? ` (CDI≈${cdiTaxaMes.toFixed(2)}%)` : '';
+      const cdiM = rentParaCdi(rentM);
+      const cdiA = rentParaCdiAno(rentA);
+      const clsM = barClass(cdiM), clsA = barClass(cdiA);
+      const taxaM = cdiTaxaMes > 0 ? ` (CDI≈${cdiTaxaMes.toFixed(2)}%)` : '';
+      const taxaA = cdiTaxaAno > 0 ? ` (CDI≈${cdiTaxaAno.toFixed(2)}%)` : '';
       bar1 = `<div class="bar-wrap">
-        <div class="bar-label"><span>Rent. Mês${cdiLabel}</span><span class="${clsM}">${rentM.toFixed(2)}%</span></div>
-        <div class="bar-track cdi-ref"><div class="bar-fill ${clsM}" style="width:${barWidthRent(rentM)}"></div></div>
+        <div class="bar-label"><span>Rent. Mês${taxaM}</span><span class="${clsM}">${rentM.toFixed(2)}%</span></div>
+        <div class="bar-track cdi-ref"><div class="bar-fill ${clsM}" style="width:${barWidth(cdiM)}"></div></div>
       </div>`;
       bar2 = `<div class="bar-wrap">
-        <div class="bar-label"><span>Rent. Ano</span><span class="${clsA}">${rentA.toFixed(2)}%</span></div>
-        <div class="bar-track"><div class="bar-fill ${clsA}" style="width:${barWidthRent(rentA)}"></div></div>
+        <div class="bar-label"><span>Rent. Ano${taxaA}</span><span class="${clsA}">${rentA.toFixed(2)}%</span></div>
+        <div class="bar-track cdi-ref"><div class="bar-fill ${clsA}" style="width:${barWidth(cdiA)}"></div></div>
       </div>`;
     }
 
@@ -1281,10 +1599,15 @@ function renderPainelCDI() {
 
     const div = document.createElement('div');
     div.className = 'cdi-card';
+    if (risco)  div.style.borderColor = 'rgba(239,68,68,.4)';
+    if (recup)  div.style.borderColor = 'rgba(34,197,94,.5)';
     div.innerHTML = `
       <div class="cc-header">
         <span class="cc-nome">${cn.nome}</span>
-        <span class="cc-conta">${cn.conta}</span>
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end">
+          ${scoreBadge}${recupBadge}${outlierBadge}${riscoBadge}
+          <span class="cc-conta">${cn.conta}</span>
+        </div>
       </div>
       ${bar1}${bar2}
       <div class="cc-ganhos">
@@ -1293,7 +1616,9 @@ function renderPainelCDI() {
       </div>
       ${ult12.length > 0 ? `
       <div class="hist-wrap">
-        <div class="hist-label">Histórico 12M</div>
+        <div class="hist-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Histórico 12M</span>${tendSpan}
+        </div>
         <div class="hist-squares">${squares}</div>
         <div class="hist-summary">
           <span class="hs-g">▲ ${acimaCnt} acima</span>
@@ -1306,6 +1631,105 @@ function renderPainelCDI() {
       </button>`;
     grid.appendChild(div);
   }
+}
+
+function renderPainelCDITabela(items, isCdi, isOutlier) {
+  isOutlier = isOutlier || (() => false);
+  const grid = document.getElementById('cdi-grid');
+  const table = document.createElement('table');
+  const h1 = isCdi ? 'CDI Mês' : 'Rent. Mês';
+  const h2 = isCdi ? 'CDI Ano'  : 'Rent. Ano';
+  table.innerHTML = `<thead><tr>
+    <th>Nome</th><th>Conta</th><th>${h1}</th><th>${h2}</th>
+    <th>Ganho Mês</th><th>Ganho Ano</th><th>Histórico 12M</th>
+    <th title="CDI% mês anterior → mês atual">Tendência</th>
+    <th title="Score de prioridade 0-100">Score</th><th>Posições</th>
+  </tr></thead><tbody>${items.map(item => {
+    const cn    = extrairContaNome(item);
+    const cdim  = item.cdi_mes ?? 0;
+    const cdia  = item.cdi_ano ?? 0;
+    const rentM = parseRent(item.rent_mes);
+    const rentA = parseRent(item.rent_ano);
+    const v1    = isCdi ? cdim  : rentM;
+    const v2    = isCdi ? cdia  : rentA;
+    const c1    = isCdi ? barClass(cdim) : barClass(rentParaCdi(rentM));
+    const c2    = isCdi ? barClass(cdia) : barClass(rentParaCdiAno(rentA));
+    const fmt1  = isCdi ? v1.toFixed(1) + '%' : v1.toFixed(2) + '%';
+    const fmt2  = isCdi ? v2.toFixed(1) + '%' : v2.toFixed(2) + '%';
+    const ult12 = (item.historico||[]).slice(-12);
+    const histHtml = ult12.map(h => {
+      const cor = (h.cdi_pct??0) >= 100 ? '#22c55e' : '#ef4444';
+      return `<span class="ths" style="background:${cor}" title="${h.mes}: ${h.cdi_pct?.toFixed(1)??'?'}% CDI"></span>`;
+    }).join('');
+    const risco = isRisco(item);
+    const recup = isRecuperando(item);
+    const out   = isOutlier(item);
+    const score = calcularScore(item);
+    const tend  = tendencia(item);
+    const tendHtml = tend
+      ? `<span class="${tend.cls}" title="vs mês anterior">${tend.sinal} ${tend.prev.toFixed(0)}%→${tend.curr.toFixed(0)}%</span>`
+      : '<span class="trend-flat">—</span>';
+    const ativos = item.ativos || [];
+    const hasPos = ativos.length > 0;
+    if (!window._posData) window._posData = {};
+    window._posData[cn.conta] = { ativos, nome: cn.nome, conta: cn.conta };
+    const rowClick = hasPos ? `onclick="abrirModalPosicoes('${cn.conta}')" style="cursor:pointer" title="Clique para ver posições"` : '';
+    const nameBadges = [
+      risco ? `<span class="risco-badge">⚠</span>` : '',
+      recup ? `<span class="rec-badge">🔄</span>`   : '',
+      out   ? `<span class="outlier-badge">⚡</span>` : '',
+    ].filter(Boolean).join('');
+    return `<tr ${rowClick}>
+      <td class="td-nome" title="${cn.nome}" style="display:flex;align-items:center;gap:5px">${nameBadges}<span>${cn.nome}</span></td>
+      <td style="font-family:var(--mono);color:var(--accent);font-size:11px">${cn.conta}</td>
+      <td class="${c1}" style="font-family:var(--mono);font-weight:700">${fmt1}</td>
+      <td class="${c2}" style="font-family:var(--mono);font-weight:700">${fmt2}</td>
+      <td style="font-family:var(--mono)">R$ ${item.ganho_mes??'—'}</td>
+      <td style="font-family:var(--mono)">R$ ${item.ganho_ano??'—'}</td>
+      <td><div class="td-hist">${histHtml}</div></td>
+      <td>${tendHtml}</td>
+      <td><span class="score-badge ${scoreCls(score)}" title="${score}/100">${scoreLabel(score)}</span></td>
+      <td style="text-align:center">${hasPos
+        ? `<button onclick="event.stopPropagation();abrirModalPosicoes('${cn.conta}')" style="background:var(--accent2);border:none;border-radius:5px;color:#fff;padding:3px 8px;font-size:10px;cursor:pointer;font-family:var(--sans)">▦ ${ativos.length}</button>`
+        : '<span style="color:var(--muted);font-size:10px">—</span>'
+      }</td>
+    </tr>`;
+  }).join('')}</tbody>`;
+  grid.appendChild(table);
+}
+
+function exportarCSV() {
+  if (!_itensFiltrados.length) return;
+  const header = ['Nome','Conta','CDI Mês %','CDI Ano %','Rent. Mês %','Rent. Ano %','Ganho Mês','Ganho Ano','Risco 3M'];
+  const linhas = _itensFiltrados.map(i => {
+    const cn = extrairContaNome(i);
+    return [cn.nome, cn.conta, i.cdi_mes??'', i.cdi_ano??'', i.rent_mes??'', i.rent_ano??'',
+            i.ganho_mes??'', i.ganho_ano??'', isRisco(i)?'SIM':'NÃO']
+      .map(v => `"${String(v).replace(/"/g,'""')}"`).join(';');
+  });
+  const csv  = '﻿' + [header.join(';'), ...linhas].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), {
+    href: url, download: `painel_cdi_${assessorAtivo||'todos'}.csv`
+  }).click();
+  URL.revokeObjectURL(url);
+}
+
+function exportarExcel() {
+  if (!_itensFiltrados.length) return;
+  if (typeof XLSX === 'undefined') { alert('Biblioteca Excel ainda carregando. Tente novamente em instantes.'); return; }
+  const rows = [['Nome','Conta','CDI Mês %','CDI Ano %','Rent. Mês %','Rent. Ano %','Ganho Mês','Ganho Ano','Risco 3M']];
+  _itensFiltrados.forEach(i => {
+    const cn = extrairContaNome(i);
+    rows.push([cn.nome, cn.conta, i.cdi_mes??'', i.cdi_ano??'',
+               parseRent(i.rent_mes), parseRent(i.rent_ano),
+               i.ganho_mes??'', i.ganho_ano??'', isRisco(i)?'SIM':'NÃO']);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Painel CDI');
+  XLSX.writeFile(wb, `painel_cdi_${assessorAtivo||'todos'}.xlsx`);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1359,14 +1783,120 @@ function renderModalLists() {
     '<div class="modal-sem-dados">Menos de 6 ativos</div>';
 }
 
+// ═══════════════════════════════════════════════════
+// SCORE DE PRIORIDADE
+// ═══════════════════════════════════════════════════
+function calcularScore(item) {
+  const cdim = item.cdi_mes ?? 0;
+  const scoreCdi = cdim >= 100 ? 0 : Math.min((100 - cdim) * 0.5, 50);
+  const tend = tendencia(item);
+  const scoreTend = tend && tend.delta < 0 ? Math.min(-tend.delta * 0.5, 25) : 0;
+  const hist = item.historico || [];
+  let consec = 0;
+  for (let i = hist.length - 1; i >= 0; i--) {
+    if ((hist[i].cdi_pct ?? 0) < 100) consec++; else break;
+  }
+  return Math.min(Math.round(scoreCdi + scoreTend + Math.min(consec * 5, 25)), 100);
+}
+function scoreCls(s)   { return s >= 60 ? 'score-urgente' : s >= 30 ? 'score-atencao' : 'score-ok'; }
+function scoreLabel(s) { return s >= 60 ? '🔴 Urgente'    : s >= 30 ? '🟡 Atenção'    : '✅ OK'; }
+
+function isRecuperando(item) {
+  const hist = item.historico || [];
+  if (hist.length < 2) return false;
+  return (hist[hist.length - 2]?.cdi_pct ?? 0) < 100 && (hist[hist.length - 1]?.cdi_pct ?? 0) >= 100;
+}
+
+// ═══════════════════════════════════════════════════
+// CONCENTRAÇÃO DE ATIVOS
+// ═══════════════════════════════════════════════════
+function calcularConcentracao() {
+  const items = dadosJson[assessorAtivo] || [];
+  const mapa  = {};
+  for (const item of items) {
+    const cn = extrairContaNome(item);
+    for (const ativo of (item.ativos || [])) {
+      if (!mapa[ativo.nome]) mapa[ativo.nome] = { clientes: [] };
+      mapa[ativo.nome].clientes.push({ nome: cn.nome, conta: cn.conta, retorno: ativo.retorno });
+    }
+  }
+  return Object.entries(mapa)
+    .filter(([, v]) => v.clientes.length >= 2)
+    .map(([nome, v]) => ({
+      nome,
+      count:      v.clientes.length,
+      avgRetorno: v.clientes.reduce((s,c) => s + c.retorno, 0) / v.clientes.length,
+      negativos:  v.clientes.filter(c => c.retorno < 0).length,
+      clientes:   [...v.clientes].sort((a,b) => a.retorno - b.retorno),
+    }))
+    .sort((a,b) => b.count - a.count);
+}
+
+function abrirModalConcentracao() {
+  const dados = calcularConcentracao();
+  const el    = document.getElementById('modal-conc-body');
+  if (!dados.length) {
+    el.innerHTML = '<div class="conc-vazio">Sem dados de posição carregados.<br>Processe os PDFs para ver a concentração.</div>';
+  } else {
+    const risco    = dados.filter(d => d.avgRetorno < 0 || d.negativos >= 2).sort((a,b) => b.negativos - a.negativos || a.avgRetorno - b.avgRetorno);
+    const destaque = dados.filter(d => d.avgRetorno >= 0 && d.negativos < 2).sort((a,b) => b.avgRetorno - a.avgRetorno);
+    const mkRow = d => {
+      const cls = d.avgRetorno >= 0 ? 'green' : 'red';
+      const sig = d.avgRetorno >= 0 ? '+' : '';
+      return `<div class="conc-row">
+        <div class="conc-row-header" onclick="toggleConcentracaoRow(this)">
+          <span class="conc-ativo-nome">${d.nome}</span>
+          <span class="conc-count">${d.count} clientes</span>
+          <span class="conc-avg ${cls}">${sig}${d.avgRetorno.toFixed(2)}%</span>
+          ${d.negativos > 0 ? `<span class="conc-neg-badge">${d.negativos} negativos</span>` : ''}
+          <span class="conc-expand">▼</span>
+        </div>
+        <div class="conc-clients">
+          ${d.clientes.map(c => {
+            const c2 = c.retorno >= 0 ? 'green' : 'red';
+            const s2 = c.retorno >= 0 ? '+' : '';
+            return `<div class="conc-client-row">
+              <span>${c.nome}</span>
+              <span style="display:flex;gap:8px;align-items:center">
+                <span style="font-family:var(--mono);color:var(--muted);font-size:10px">${c.conta}</span>
+                <span class="${c2}" style="font-family:var(--mono);font-weight:700">${s2}${c.retorno.toFixed(2)}%</span>
+              </span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    };
+    el.innerHTML =
+      (risco.length    ? `<div class="conc-section-title">⚠ Ativos em risco concentrado</div>${risco.map(mkRow).join('')}`    : '') +
+      (destaque.length ? `<div class="conc-section-title">🏆 Ativos em destaque</div>${destaque.map(mkRow).join('')}`          : '');
+  }
+  document.getElementById('modal-conc').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharModalConcentracao() {
+  document.getElementById('modal-conc').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function toggleConcentracaoRow(header) {
+  const clients = header.nextElementSibling;
+  const arrow   = header.querySelector('.conc-expand');
+  const isOpen  = clients.classList.toggle('open');
+  arrow.textContent = isOpen ? '▲' : '▼';
+}
+
 function fecharModal() {
   document.getElementById('modal-posicoes').style.display = 'none';
   document.body.style.overflow = '';
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { fecharModal(); fecharModalConcentracao(); }
+});
 
-document.getElementById('modal-posicoes').addEventListener('click', e => {
+// delegação no document porque o modal é renderizado após este script
+document.addEventListener('click', e => {
   const btn = e.target.closest('.modal-mode-btn');
   if (!btn) return;
   modoModal = btn.dataset.mmode;
@@ -1402,6 +1932,18 @@ document.getElementById('modal-posicoes').addEventListener('click', e => {
         <div id="modal-lose-list"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ── Modal Concentração de Ativos ── -->
+<div id="modal-conc" style="display:none">
+  <div id="modal-conc-overlay" onclick="fecharModalConcentracao()"></div>
+  <div id="modal-conc-box">
+    <div id="modal-conc-header">
+      <h3>⊗ Concentração de Ativos</h3>
+      <button onclick="fecharModalConcentracao()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+    <div id="modal-conc-body"></div>
   </div>
 </div>
 
