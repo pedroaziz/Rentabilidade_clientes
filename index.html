@@ -829,6 +829,15 @@ html, body { height: 100%; font-family: var(--sans); background: var(--bg); colo
         </div>
       </div>
 
+      <div id="score-legenda" style="display:none;padding:6px 20px;font-size:10px;color:var(--muted);line-height:1.6;background:var(--card);border-bottom:1px solid var(--border)">
+        <strong style="color:var(--text)">Score de Prioridade</strong> — soma 3 fatores (máx 100 pts):
+        &nbsp;①&nbsp;<em>CDI% abaixo de 100%</em> (até 50 pts)&nbsp;
+        ②&nbsp;<em>Tendência de queda vs mês anterior</em> (até 25 pts)&nbsp;
+        ③&nbsp;<em>Meses consecutivos abaixo do CDI</em> (até 25 pts) &nbsp;·&nbsp;
+        <span class="score-badge score-ok">✅ OK</span> 0–29 &nbsp;
+        <span class="score-badge score-atencao">🟡 Atenção</span> 30–59 &nbsp;
+        <span class="score-badge score-urgente">🔴 Urgente</span> 60–100
+      </div>
       <div id="tabela-filtros"></div>
       <div id="cdi-grid"></div>
     </div>
@@ -1103,6 +1112,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('filtros').style.display    = tabAtiva === 'mensagens' ? 'flex' : 'none';
     document.getElementById('content').style.display    = tabAtiva === 'mensagens' ? '' : 'none';
     document.getElementById('painel-cdi').classList.toggle('visible', tabAtiva === 'painel');
+    document.getElementById('score-legenda').style.display = tabAtiva === 'painel' ? '' : 'none';
     if (tabAtiva === 'painel') renderPainelCDI();
     else renderCards();
   });
@@ -1401,16 +1411,21 @@ function rentParaCdiAno(v) {
   return taxa > 0 ? v / taxa * 100 : 0;
 }
 
+// historico está armazenado MAIS RECENTE PRIMEIRO (índice 0 = mês atual)
+function hist3Recentes(item) {
+  return (item.historico || []).slice(0, 3); // 3 meses mais recentes
+}
+
 function isRisco(item) {
-  const hist = (item.historico || []).slice(-3);
-  return hist.length === 3 && hist.every(h => (h.cdi_pct ?? 0) < 100);
+  const h = hist3Recentes(item);
+  return h.length === 3 && h.every(m => (m.cdi_pct ?? 0) < 100);
 }
 
 function tendencia(item) {
   const hist = item.historico || [];
   if (hist.length < 2) return null;
-  const curr = hist[hist.length - 1]?.cdi_pct ?? 0;
-  const prev = hist[hist.length - 2]?.cdi_pct ?? 0;
+  const curr  = hist[0]?.cdi_pct ?? 0; // mês mais recente
+  const prev  = hist[1]?.cdi_pct ?? 0; // mês anterior
   const delta = curr - prev;
   if (Math.abs(delta) < 0.5) return { sinal: '→', cls: 'trend-flat', delta, curr, prev };
   return delta > 0
@@ -1539,7 +1554,8 @@ function renderPainelCDI() {
     const cdia  = item.cdi_ano ?? 0;
     const rentM = parseRent(item.rent_mes);
     const rentA = parseRent(item.rent_ano);
-    const ult12 = (item.historico||[]).slice(-12);
+    // slice(0,12) = 12 mais recentes; reverse() = mais antigo à esq, mais recente à dir
+    const ult12 = (item.historico||[]).slice(0, 12).reverse();
 
     const squares = ult12.map(h => {
       const cor = (h.cdi_pct??0) >= 100 ? '#22c55e' : '#ef4444';
@@ -1558,13 +1574,10 @@ function renderPainelCDI() {
     const score  = calcularScore(item);
     const tend   = tendencia(item);
 
-    const scoreBadge  = `<span class="score-badge ${scoreCls(score)}" title="Score de prioridade: ${score}/100">${scoreLabel(score)}</span>`;
-    const riscoBadge  = risco ? `<span class="risco-badge" title="3 meses consecutivos abaixo do CDI">⚠ Risco</span>` : '';
-    const recupBadge  = recup ? `<span class="rec-badge" title="Voltou a superar o CDI este mês">🔄 Voltou ao CDI</span>` : '';
-    const outlierBadge = out  ? `<span class="outlier-badge" title="CDI ${cdim.toFixed(1)}% — muito acima ou abaixo da média do assessor (${_mean.toFixed(1)}%)">⚡ Outlier</span>` : '';
-    const tendSpan = tend
-      ? `<span class="${tend.cls}" title="vs mês anterior">${tend.sinal} ${tend.prev.toFixed(0)}%→${tend.curr.toFixed(0)}%</span>`
-      : '';
+    const scoreBadge   = `<span class="score-badge ${scoreCls(score)}" title="Score de prioridade: ${score}/100">${scoreLabel(score)}</span>`;
+    const riscoBadge   = risco ? `<span class="risco-badge" title="3 meses consecutivos abaixo do CDI">⚠ Risco</span>` : '';
+    const recupBadge   = recup ? `<span class="rec-badge" title="Voltou a superar o CDI este mês">🔄 Voltou ao CDI</span>` : '';
+    const outlierBadge = out   ? `<span class="outlier-badge" title="CDI ${cdim.toFixed(1)}% — muito acima ou abaixo da média do assessor (${_mean.toFixed(1)}%)">⚡ Outlier</span>` : '';
 
     let bar1, bar2;
     if (isCdi) {
@@ -1616,9 +1629,7 @@ function renderPainelCDI() {
       </div>
       ${ult12.length > 0 ? `
       <div class="hist-wrap">
-        <div class="hist-label" style="display:flex;justify-content:space-between;align-items:center">
-          <span>Histórico 12M</span>${tendSpan}
-        </div>
+        <div class="hist-label">Histórico 12M <span style="color:var(--muted);font-size:9px">(antigo → recente)</span></div>
         <div class="hist-squares">${squares}</div>
         <div class="hist-summary">
           <span class="hs-g">▲ ${acimaCnt} acima</span>
@@ -1641,8 +1652,8 @@ function renderPainelCDITabela(items, isCdi, isOutlier) {
   const h2 = isCdi ? 'CDI Ano'  : 'Rent. Ano';
   table.innerHTML = `<thead><tr>
     <th>Nome</th><th>Conta</th><th>${h1}</th><th>${h2}</th>
-    <th>Ganho Mês</th><th>Ganho Ano</th><th>Histórico 12M</th>
-    <th title="CDI% mês anterior → mês atual">Tendência</th>
+    <th>Ganho Mês</th><th>Ganho Ano</th>
+    <th title="Quadradinhos: antigo (esq) → recente (dir)">12M</th>
     <th title="Score de prioridade 0-100">Score</th><th>Posições</th>
   </tr></thead><tbody>${items.map(item => {
     const cn    = extrairContaNome(item);
@@ -1656,7 +1667,8 @@ function renderPainelCDITabela(items, isCdi, isOutlier) {
     const c2    = isCdi ? barClass(cdia) : barClass(rentParaCdiAno(rentA));
     const fmt1  = isCdi ? v1.toFixed(1) + '%' : v1.toFixed(2) + '%';
     const fmt2  = isCdi ? v2.toFixed(1) + '%' : v2.toFixed(2) + '%';
-    const ult12 = (item.historico||[]).slice(-12);
+    // mais antigo à esquerda, mais recente à direita
+    const ult12 = (item.historico||[]).slice(0, 12).reverse();
     const histHtml = ult12.map(h => {
       const cor = (h.cdi_pct??0) >= 100 ? '#22c55e' : '#ef4444';
       return `<span class="ths" style="background:${cor}" title="${h.mes}: ${h.cdi_pct?.toFixed(1)??'?'}% CDI"></span>`;
@@ -1665,19 +1677,15 @@ function renderPainelCDITabela(items, isCdi, isOutlier) {
     const recup = isRecuperando(item);
     const out   = isOutlier(item);
     const score = calcularScore(item);
-    const tend  = tendencia(item);
-    const tendHtml = tend
-      ? `<span class="${tend.cls}" title="vs mês anterior">${tend.sinal} ${tend.prev.toFixed(0)}%→${tend.curr.toFixed(0)}%</span>`
-      : '<span class="trend-flat">—</span>';
     const ativos = item.ativos || [];
     const hasPos = ativos.length > 0;
     if (!window._posData) window._posData = {};
     window._posData[cn.conta] = { ativos, nome: cn.nome, conta: cn.conta };
     const rowClick = hasPos ? `onclick="abrirModalPosicoes('${cn.conta}')" style="cursor:pointer" title="Clique para ver posições"` : '';
     const nameBadges = [
-      risco ? `<span class="risco-badge">⚠</span>` : '',
-      recup ? `<span class="rec-badge">🔄</span>`   : '',
-      out   ? `<span class="outlier-badge">⚡</span>` : '',
+      risco ? `<span class="risco-badge">⚠</span>`    : '',
+      recup ? `<span class="rec-badge">🔄</span>`      : '',
+      out   ? `<span class="outlier-badge">⚡</span>`  : '',
     ].filter(Boolean).join('');
     return `<tr ${rowClick}>
       <td class="td-nome" title="${cn.nome}" style="display:flex;align-items:center;gap:5px">${nameBadges}<span>${cn.nome}</span></td>
@@ -1686,9 +1694,8 @@ function renderPainelCDITabela(items, isCdi, isOutlier) {
       <td class="${c2}" style="font-family:var(--mono);font-weight:700">${fmt2}</td>
       <td style="font-family:var(--mono)">R$ ${item.ganho_mes??'—'}</td>
       <td style="font-family:var(--mono)">R$ ${item.ganho_ano??'—'}</td>
-      <td><div class="td-hist">${histHtml}</div></td>
-      <td>${tendHtml}</td>
-      <td><span class="score-badge ${scoreCls(score)}" title="${score}/100">${scoreLabel(score)}</span></td>
+      <td><div class="td-hist" title="antigo → recente">${histHtml}</div></td>
+      <td><span class="score-badge ${scoreCls(score)}" title="Score ${score}/100">${scoreLabel(score)}</span></td>
       <td style="text-align:center">${hasPos
         ? `<button onclick="event.stopPropagation();abrirModalPosicoes('${cn.conta}')" style="background:var(--accent2);border:none;border-radius:5px;color:#fff;padding:3px 8px;font-size:10px;cursor:pointer;font-family:var(--sans)">▦ ${ativos.length}</button>`
         : '<span style="color:var(--muted);font-size:10px">—</span>'
@@ -1787,13 +1794,14 @@ function renderModalLists() {
 // SCORE DE PRIORIDADE
 // ═══════════════════════════════════════════════════
 function calcularScore(item) {
-  const cdim = item.cdi_mes ?? 0;
-  const scoreCdi = cdim >= 100 ? 0 : Math.min((100 - cdim) * 0.5, 50);
-  const tend = tendencia(item);
+  const cdim      = item.cdi_mes ?? 0;
+  const scoreCdi  = cdim >= 100 ? 0 : Math.min((100 - cdim) * 0.5, 50);
+  const tend      = tendencia(item);
   const scoreTend = tend && tend.delta < 0 ? Math.min(-tend.delta * 0.5, 25) : 0;
+  // conta meses consecutivos abaixo do CDI a partir do mais recente (índice 0)
   const hist = item.historico || [];
   let consec = 0;
-  for (let i = hist.length - 1; i >= 0; i--) {
+  for (let i = 0; i < hist.length; i++) {
     if ((hist[i].cdi_pct ?? 0) < 100) consec++; else break;
   }
   return Math.min(Math.round(scoreCdi + scoreTend + Math.min(consec * 5, 25)), 100);
@@ -1802,9 +1810,10 @@ function scoreCls(s)   { return s >= 60 ? 'score-urgente' : s >= 30 ? 'score-ate
 function scoreLabel(s) { return s >= 60 ? '🔴 Urgente'    : s >= 30 ? '🟡 Atenção'    : '✅ OK'; }
 
 function isRecuperando(item) {
+  // índice 0 = mês atual, índice 1 = mês anterior
   const hist = item.historico || [];
   if (hist.length < 2) return false;
-  return (hist[hist.length - 2]?.cdi_pct ?? 0) < 100 && (hist[hist.length - 1]?.cdi_pct ?? 0) >= 100;
+  return (hist[1]?.cdi_pct ?? 0) < 100 && (hist[0]?.cdi_pct ?? 0) >= 100;
 }
 
 // ═══════════════════════════════════════════════════
