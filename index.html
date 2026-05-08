@@ -808,6 +808,7 @@ html, body { height: 100%; font-family: var(--sans); background: var(--bg); colo
         </div>
         <label style="font-size:12px;color:var(--muted);margin-left:4px">Ordenar:</label>
         <select id="order-select">
+          <option value="pl-asc">PL ↓ (maior primeiro)</option>
           <option value="cdi-mes-desc">CDI mês ↓</option>
           <option value="cdi-mes-asc">CDI mês ↑</option>
           <option value="cdi-ano-desc">CDI ano ↓</option>
@@ -1461,7 +1462,13 @@ function renderPainelCDI() {
   const ord = document.getElementById('order-select').value;
   items = [...items].sort((a, b) => {
     let va, vb;
-    if (ord.startsWith('rent')) {
+    if (ord === 'pl-asc') {
+      // pl_rank = Excel row order (1 = maior PL); use array index as fallback
+      const _all = dadosJson[assessorAtivo] || [];
+      va = a.pl_rank ?? (_all.indexOf(a) + 1);
+      vb = b.pl_rank ?? (_all.indexOf(b) + 1);
+      return va - vb;
+    } else if (ord.startsWith('rent')) {
       va = parseRent(ord.includes('mes') ? a.rent_mes : a.rent_ano);
       vb = parseRent(ord.includes('mes') ? b.rent_mes : b.rent_ano);
     } else {
